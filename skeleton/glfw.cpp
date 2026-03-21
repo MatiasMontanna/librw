@@ -184,7 +184,7 @@ mousebtn(GLFWwindow *window, int button, int action, int mods)
 {
 	static int buttons = 0;
 	sk::MouseState ms;
-	
+
 	switch(button){
 	case GLFW_MOUSE_BUTTON_LEFT:
 		if(action == GLFW_PRESS)
@@ -210,6 +210,15 @@ mousebtn(GLFWwindow *window, int button, int action, int mods)
 	EventHandler(MOUSEBTN, &ms);
 }
 
+static void
+mousescroll(GLFWwindow *window, double xoffset, double yoffset)
+{
+	sk::MouseState ms;
+	ms.scrollx = (float)xoffset;
+	ms.scrolly = (float)yoffset;
+	EventHandler(MOUSESCROLL, &ms);
+}
+
 int
 main(int argc, char *argv[])
 {
@@ -233,6 +242,7 @@ main(int argc, char *argv[])
 	glfwSetFramebufferSizeCallback(window, resize);
 	glfwSetCursorPosCallback(window, mousemove);
 	glfwSetMouseButtonCallback(window, mousebtn);
+	glfwSetScrollCallback(window, mousescroll);
 
 	// query actual framebuffer size (may differ from window size on Retina)
 	int fbw, fbh;

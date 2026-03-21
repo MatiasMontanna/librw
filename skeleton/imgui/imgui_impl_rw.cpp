@@ -55,6 +55,9 @@ ImGui_ImplRW_RenderDrawLists(ImDrawData* draw_data)
 		vtx_dst += cmd_list->VtxBuffer.Size;
 	}
 
+	ImVec2 clip_off = draw_data->DisplayPos;
+	ImVec2 clip_scale = draw_data->FramebufferScale;
+
 	int vertexAlpha = rw::GetRenderState(rw::VERTEXALPHA);
 	int srcBlend = rw::GetRenderState(rw::SRCBLEND);
 	int dstBlend = rw::GetRenderState(rw::DESTBLEND);
@@ -64,6 +67,16 @@ ImGui_ImplRW_RenderDrawLists(ImDrawData* draw_data)
 	int addrV = rw::GetRenderState(rw::TEXTUREADDRESSV);
 	int filter = rw::GetRenderState(rw::TEXTUREFILTER);
 	int cullmode = rw::GetRenderState(rw::CULLMODE);
+#ifdef RW_GL3
+	GLboolean scissorEnabled = glIsEnabled(GL_SCISSOR_TEST);
+	GLint scissorBox[4];
+	glGetIntegerv(GL_SCISSOR_BOX, scissorBox);
+#elif defined(RW_D3D9)
+	DWORD scissorEnabled = FALSE;
+	RECT scissorRect;
+	rw::d3d::d3ddevice->GetRenderState(D3DRS_SCISSORTESTENABLE, &scissorEnabled);
+	rw::d3d::d3ddevice->GetScissorRect(&scissorRect);
+#endif
 
 	rw::SetRenderState(rw::VERTEXALPHA, 1);
 	rw::SetRenderState(rw::SRCBLEND, rw::BLENDSRCALPHA);
@@ -80,6 +93,28 @@ ImGui_ImplRW_RenderDrawLists(ImDrawData* draw_data)
 			if(pcmd->UserCallback)
 				pcmd->UserCallback(cmd_list, pcmd);
 			else{
+				ImVec2 clip_min((pcmd->ClipRect.x - clip_off.x) * clip_scale.x,
+					(pcmd->ClipRect.y - clip_off.y) * clip_scale.y);
+				ImVec2 clip_max((pcmd->ClipRect.z - clip_off.x) * clip_scale.x,
+					(pcmd->ClipRect.w - clip_off.y) * clip_scale.y);
+				if(clip_max.x <= clip_min.x || clip_max.y <= clip_min.y){
+					idx_offset += pcmd->ElemCount;
+					continue;
+				}
+#ifdef RW_GL3
+				glEnable(GL_SCISSOR_TEST);
+				glScissor((int)clip_min.x, (int)(draw_data->DisplaySize.y*clip_scale.y - clip_max.y),
+					(int)(clip_max.x - clip_min.x), (int)(clip_max.y - clip_min.y));
+#elif defined(RW_D3D9)
+				RECT r = {
+					(LONG)clip_min.x,
+					(LONG)clip_min.y,
+					(LONG)clip_max.x,
+					(LONG)clip_max.y
+				};
+				rw::d3d::d3ddevice->SetRenderState(D3DRS_SCISSORTESTENABLE, TRUE);
+				rw::d3d::d3ddevice->SetScissorRect(&r);
+#endif
 				rw::Texture *tex = (rw::Texture*)pcmd->GetTexID();
 				if(tex && tex->raster){
 					rw::SetRenderStatePtr(rw::TEXTURERASTER, tex->raster);
@@ -96,6 +131,17 @@ ImGui_ImplRW_RenderDrawLists(ImDrawData* draw_data)
 		}
 		vtx_offset += cmd_list->VtxBuffer.Size;
 	}
+
+#ifdef RW_GL3
+	glScissor(scissorBox[0], scissorBox[1], scissorBox[2], scissorBox[3]);
+	if(scissorEnabled)
+		glEnable(GL_SCISSOR_TEST);
+	else
+		glDisable(GL_SCISSOR_TEST);
+#elif defined(RW_D3D9)
+	rw::d3d::d3ddevice->SetScissorRect(&scissorRect);
+	rw::d3d::d3ddevice->SetRenderState(D3DRS_SCISSORTESTENABLE, scissorEnabled);
+#endif
 
 	rw::SetRenderState(rw::VERTEXALPHA,vertexAlpha);
 	rw::SetRenderState(rw::SRCBLEND, srcBlend);
@@ -304,6 +350,10 @@ ImGuiEventHandler(sk::Event e, void *param)
 		io.MouseDown[0] = !!(ms->buttons & 1);
 		io.MouseDown[2] = !!(ms->buttons & 2);
 		io.MouseDown[1] = !!(ms->buttons & 4);
+		return EVENTPROCESSED;
+	case MOUSESCROLL:
+		ms = (MouseState*)param;
+		io.AddMouseWheelEvent(ms->scrollx, ms->scrolly);
 		return EVENTPROCESSED;
 	}
 	return EVENTPROCESSED;

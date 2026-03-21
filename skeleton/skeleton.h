@@ -72,6 +72,7 @@ enum Event
 	CHARINPUT,
 	MOUSEMOVE,
 	MOUSEBTN,
+	MOUSESCROLL,
 	RESIZE,
 	IDLE,
 	QUIT
@@ -91,6 +92,7 @@ struct MouseState
 {
 	int posx, posy;
 	int buttons;	// bits 0-2 are left, middle, right button down
+	float scrollx, scrolly;
 };
 
 struct Args
