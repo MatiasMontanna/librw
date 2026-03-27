@@ -243,6 +243,10 @@ main(int argc, char *argv[])
 	glfwSetCursorPosCallback(window, mousemove);
 	glfwSetMouseButtonCallback(window, mousebtn);
 	glfwSetScrollCallback(window, mousescroll);
+	glfwSetDropCallback(window, [](GLFWwindow*, int count, const char **paths){
+		for(int i = 0; i < count; i++)
+			EventHandler(FILEDROP, (void*)paths[i]);
+	});
 
 	// query actual framebuffer size (may differ from window size on Retina)
 	int fbw, fbh;

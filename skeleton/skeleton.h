@@ -74,6 +74,7 @@ enum Event
 	MOUSEBTN,
 	MOUSESCROLL,
 	RESIZE,
+	FILEDROP,
 	IDLE,
 	QUIT
 };

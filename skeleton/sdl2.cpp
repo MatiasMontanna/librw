@@ -285,6 +285,11 @@ main(int argc, char *argv[])
 				EventHandler(MOUSEBTN, &ms);
 				break;
 			}
+			case SDL_DROPFILE: {
+				EventHandler(FILEDROP, (void*)event.drop.file);
+				SDL_free(event.drop.file);
+				break;
+			}
 			case SDL_MOUSEBUTTONUP: {
 				switch (event.button.button) {
 				case SDL_BUTTON_LEFT: mouseButtons &= ~BUTTON_LEFT; break;
