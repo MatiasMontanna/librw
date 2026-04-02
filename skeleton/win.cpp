@@ -2,6 +2,7 @@
 #include <windows.h>
 #include <rw.h>
 #include "skeleton.h"
+#include <shellapi.h>
 
 using namespace sk;
 using namespace rw;
@@ -136,6 +137,18 @@ WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 		EventHandler(MOUSEBTN, &ms);
 		break;
 
+	case WM_MOUSEWHEEL:
+		ms.scrollx = 0.0f;
+		ms.scrolly = (float)GET_WHEEL_DELTA_WPARAM(wParam) / (float)WHEEL_DELTA;
+		EventHandler(MOUSESCROLL, &ms);
+		break;
+
+	case WM_MOUSEHWHEEL:
+		ms.scrollx = -(float)GET_WHEEL_DELTA_WPARAM(wParam) / (float)WHEEL_DELTA;
+		ms.scrolly = 0.0f;
+		EventHandler(MOUSESCROLL, &ms);
+		break;
+
 	case WM_SIZE:
 		rw::Rect r;
 		r.x = 0;
@@ -148,6 +161,18 @@ WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 	case WM_CLOSE:
 		DestroyWindow(hwnd);
 		break;
+
+	case WM_DROPFILES: {
+		HDROP drop = (HDROP)wParam;
+		UINT numFiles = DragQueryFileA(drop, 0xFFFFFFFF, nil, 0);
+		char path[MAX_PATH];
+		for(UINT i = 0; i < numFiles; i++){
+			if(DragQueryFileA(drop, i, path, sizeof(path)) > 0)
+				EventHandler(FILEDROP, path);
+		}
+		DragFinish(drop);
+		break;
+	}
 
 	case WM_SYSCOMMAND:
 		if ((wParam & 0xfff0) == SC_KEYMENU) // Disable ALT application menu
@@ -198,6 +223,7 @@ MakeWindow(HINSTANCE instance, int width, int height, const char *title)
 		MessageBox(0, "CreateWindow() - FAILED", 0, 0);
 		return 0;
 	}
+	DragAcceptFiles(win, TRUE);
 	ShowWindow(win, SW_SHOW);
 	UpdateWindow(win);
 	return win;
